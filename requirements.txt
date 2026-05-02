@@ -1,0 +1,32 @@
+# Backend
+fastapi
+uvicorn
+pydantic
+python-dotenv
+
+# Agents
+langgraph
+langchain-core
+
+# LLM APIs (UPDATED)
+google-generativeai
+groq
+
+# Retrieval
+chromadb
+sentence-transformers
+
+# Networking
+requests
+httpx
+tenacity
+
+# Data
+numpy
+pandas
+
+# UI
+streamlit
+
+# Dev
+tqdm

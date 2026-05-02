@@ -1,0 +1,15 @@
+# Env + secrets
+.env
+
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+
+# VS Code
+.vscode/
+
+# OS junk
+.DS_Store
+Thumbs.db
