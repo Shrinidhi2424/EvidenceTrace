@@ -1,3 +1,5 @@
+# app/classification/stance_classifier.py
+
 import json
 import logging
 from typing import Dict, Optional
@@ -12,7 +14,7 @@ logger = logging.getLogger(__name__)
 def _safe_fallback() -> Dict:
     return {
         "stance": "neutral",
-        "confidence": 0.0,
+        "confidence": 0.3,
         "reason": "Abstract missing or insufficient for classification",
     }
 
@@ -27,22 +29,43 @@ def _extract_json(text: str) -> str:
 
 def _parse_response(response: str) -> Optional[Dict]:
     """
-    Parse and validate LLM JSON response.
+    Parse and validate LLM JSON response (robust to messy outputs).
     """
     try:
-        raw = _extract_json(response)
-        data = json.loads(raw)
+        # Try direct parse
+        try:
+            data = json.loads(response)
+        except Exception:
+            raw = _extract_json(response)
+            data = json.loads(raw)
 
+        # Normalize stance
         stance = str(data.get("stance", "")).lower().strip()
+
         if stance not in ["supports", "contradicts", "neutral"]:
-            raise ValueError("Invalid stance")
+            if "support" in stance:
+                stance = "supports"
+            elif "contradict" in stance or "oppose" in stance:
+                stance = "contradicts"
+            else:
+                stance = "neutral"
+
         data["stance"] = stance
 
-        conf = float(data.get("confidence", 0.0))
+        # Confidence
+        try:
+            conf = float(data.get("confidence", 0.5))
+        except Exception:
+            conf = 0.5
+
         conf = max(0.0, min(1.0, conf))
         data["confidence"] = conf
 
+        # Reason
         reason = str(data.get("reason", "")).strip()
+        if not reason:
+            reason = "No clear reasoning provided"
+
         reason = ". ".join(reason.split(". ")[:2]).strip()
         data["reason"] = reason
 
@@ -51,6 +74,28 @@ def _parse_response(response: str) -> Optional[Dict]:
     except Exception as e:
         logger.error("Parsing failed: %s | Response: %s", e, response)
         return None
+
+
+def _apply_consistency_correction(parsed: Dict, claim: str) -> Dict:
+    """
+    Ensure consistency between reasoning and stance using general logic.
+    """
+
+    reason = parsed.get("reason", "").lower()
+    stance = parsed.get("stance", "neutral")
+    confidence = parsed.get("confidence", 0.5)
+
+    # If model says neutral but still discusses relationship/effect → weak support
+    implication_signals = ["affect", "impact", "effect", "influence", "change"]
+
+    mentions_relationship = any(word in reason for word in implication_signals)
+
+    # Upgrade neutral → supports if relationship is acknowledged
+    if stance == "neutral" and mentions_relationship:
+        parsed["stance"] = "supports"
+        parsed["confidence"] = max(confidence, 0.55)
+
+    return parsed
 
 
 def classify_stance(paper: Paper, claim: str) -> Dict:
@@ -66,8 +111,11 @@ def classify_stance(paper: Paper, claim: str) -> Dict:
 
     for attempt in range(2):
         try:
-            # NOTE: timeout support depends on router implementation
             response = call_llm(prompt)
+
+            print("\n====================")
+            print("RAW RESPONSE:\n", response)
+            print("====================\n")
 
             if not response or not response.strip():
                 raise ValueError("Empty response")
@@ -75,12 +123,16 @@ def classify_stance(paper: Paper, claim: str) -> Dict:
             parsed = _parse_response(response)
 
             if parsed:
+                # ✅ Apply general consistency correction
+                parsed = _apply_consistency_correction(parsed, claim)
+
                 logger.info(
                     "Paper %s → %s (confidence=%.2f)",
                     paper.paper_id,
                     parsed["stance"],
                     parsed["confidence"],
                 )
+
                 return parsed
 
         except Exception as e:

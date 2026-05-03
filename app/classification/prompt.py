@@ -24,12 +24,30 @@ The paper is unrelated, inconclusive, or does not provide clear evidence for or 
 - You MUST output ONLY valid JSON.
 - Do NOT include any text outside JSON.
 - Do NOT hallucinate or infer beyond the abstract.
-- If the abstract does NOT directly address the claim, return "neutral".
-- Do NOT treat mention of the topic as support.
-- Do NOT assume causation or extrapolate beyond stated findings.
-- If the abstract is unclear or insufficient → return neutral with confidence 0.0.
+- Do NOT assume causation unless explicitly stated.
 - Keep reasoning to maximum 2 sentences.
-- Focus on the OVERALL conclusion of the study, not isolated results.
+
+- First determine the DIRECTION of evidence relative to the claim:
+  • "supports" if the findings are consistent with the claim.
+  • "contradicts" ONLY if the findings oppose the claim OR report no effect when the claim asserts an effect.
+  • "neutral" if the paper is unrelated, inconclusive, or provides no directional evidence.
+
+- IMPORTANT: Mixed, conditional, or partial findings do NOT change the label.
+  • If ANY valid evidence supports the claim → label = "supports"
+  • If ANY valid evidence opposes the claim → label = "contradicts"
+  • Use "neutral" only when there is no clear directional evidence.
+
+- Use CONFIDENCE to express strength:
+  • Strong, direct evidence → 0.8–0.95
+  • Partial / conditional / indirect evidence → 0.5–0.75
+  • Weak / unclear → 0.3–0.5
+
+- Lack of explicit wording of the claim does NOT imply "neutral".
+  Use the study context and findings to infer direction.
+
+- Do NOT treat related-but-different variables as contradiction unless they explicitly refute the claim.
+
+- Confidence should NEVER be 0.0 unless there is absolutely no usable information.
 
 --- REASONING STEPS (MUST FOLLOW) ---
 
