@@ -10,8 +10,18 @@ from app.retrieval.models import Paper
 
 logger = logging.getLogger(__name__)
 
-# Load embedding model once (cached)
-_model = SentenceTransformer("all-MiniLM-L6-v2")
+EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
+
+# Module-level cache: loaded once, on first use (never at import time).
+_model = None
+
+
+def get_embedding_model() -> SentenceTransformer:
+    global _model
+    if _model is None:
+        logger.info("Loading embedding model %s", EMBEDDING_MODEL_NAME)
+        _model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+    return _model
 
 
 def compute_similarity(
@@ -99,9 +109,11 @@ def score_papers(
 
     logger.info("Scoring %d papers", len(papers))
 
+    model = get_embedding_model()
+
     # Precompute query embedding (normalized)
     try:
-        query_emb = _model.encode(
+        query_emb = model.encode(
             query, convert_to_numpy=True, normalize_embeddings=True
         )
     except Exception as e:
@@ -120,7 +132,7 @@ def score_papers(
 
     # Batch encode abstracts (normalized)
     try:
-        abstract_embeddings = _model.encode(
+        abstract_embeddings = model.encode(
             abstracts, convert_to_numpy=True, normalize_embeddings=True
         )
     except Exception as e:
@@ -141,7 +153,7 @@ def score_papers(
 
         final_score = compute_final_score(sim, cit, rec, src)
 
-        # attach score (assumes Paper has score field)
+        # attach score
         paper.score = final_score
 
         # attach score breakdown (transparency)

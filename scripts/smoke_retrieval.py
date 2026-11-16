@@ -1,3 +1,4 @@
+"""Manual smoke script (prints, may use network/models). Run from repo root: python -m scripts.smoke_retrieval"""
 from app.retrieval import fetch_papers
 
 query = "intermittent fasting cognitive performance"

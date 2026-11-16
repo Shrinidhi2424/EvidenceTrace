@@ -1,10 +1,11 @@
+"""Manual smoke script (prints, may use network/models). Run from repo root: python -m scripts.smoke_full_pipeline"""
 from app.retrieval import fetch_papers
 from app.retrieval.quality_scorer import score_papers
 from app.classification import classify_stance
 from app.calibration import calibrate_confidence
 
 
-def test_full_pipeline():
+def run_full_pipeline():
     query = "does sleep deprivation impair cognitive performance"
 
     print(f"\n=== QUERY ===\n{query}\n")
@@ -44,6 +45,7 @@ def test_full_pipeline():
                 "citation_count": p.citation_count,
                 "year": p.year,
                 "score": p.score,
+                "source": p.source,
             }
         )
 
@@ -55,4 +57,4 @@ def test_full_pipeline():
 
 
 if __name__ == "__main__":
-    test_full_pipeline()
+    run_full_pipeline()

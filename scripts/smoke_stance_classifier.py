@@ -1,9 +1,10 @@
+"""Manual smoke script (prints, may use network/models). Run from repo root: python -m scripts.smoke_stance_classifier"""
 from app.retrieval import fetch_papers
 from app.retrieval.quality_scorer import score_papers
 from app.classification import classify_stance
 
 
-def test_real_pipeline():
+def run_real_pipeline():
     query = "intermittent fasting cognitive performance"
 
     papers = fetch_papers(query)
@@ -23,4 +24,4 @@ def test_real_pipeline():
 
 
 if __name__ == "__main__":
-    test_real_pipeline()
+    run_real_pipeline()
