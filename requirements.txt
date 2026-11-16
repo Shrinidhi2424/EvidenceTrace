@@ -4,16 +4,7 @@ uvicorn
 pydantic
 python-dotenv
 
-# Agents
-langgraph
-langchain-core
-
-# LLM APIs (UPDATED)
-google-generativeai
-groq
-
-# Retrieval
-chromadb
+# Retrieval + NLI (sentence-transformers also provides the CrossEncoder)
 sentence-transformers
 
 # Networking
@@ -23,10 +14,6 @@ tenacity
 
 # Data
 numpy
-pandas
-
-# UI
-streamlit
 
 # Dev
 tqdm

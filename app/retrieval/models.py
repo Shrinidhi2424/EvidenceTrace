@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -14,6 +14,8 @@ class Paper:
     citation_count: int
     paper_id: str
     source: str
+    score: float = 0.0
+    score_components: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -23,4 +25,6 @@ class Paper:
             "citation_count": self.citation_count,
             "paper_id": self.paper_id,
             "source": self.source,
+            "score": self.score,
+            "score_components": self.score_components,
         }

@@ -49,15 +49,33 @@ def compute_agreement(scores: Dict[str, float]) -> float:
     return abs(scores["supports"] - scores["contradicts"])
 
 
-def compute_diversity(items: List[EvidenceItem]) -> float:
+def compute_evidence_counts(items: List[EvidenceItem]) -> Dict[str, int]:
     """
-    Unique paper ratio.
+    Raw number of papers per stance (anything not supports/contradicts is neutral).
     """
-    if not items:
-        return 0.0
+    counts = {"supports": 0, "contradicts": 0, "neutral": 0}
+    for item in items:
+        key = item.stance if item.stance in ("supports", "contradicts") else "neutral"
+        counts[key] += 1
+    return counts
 
-    unique_ids = set(i.paper_id for i in items)
-    return len(unique_ids) / len(items)
+
+def compute_evidence_breadth(items: List[EvidenceItem]) -> float:
+    """
+    How many papers give a direction: non-neutral papers / 5, capped at 1.
+    """
+    non_neutral = sum(1 for i in items if i.stance in ("supports", "contradicts"))
+    return min(1.0, non_neutral / 5)
+
+
+def is_credible(item: EvidenceItem) -> bool:
+    """
+    Credibility gate for conflict detection. arXiv papers never have citation
+    counts, so they are judged by retrieval quality score instead.
+    """
+    if item.source == "arxiv":
+        return item.score >= 0.6
+    return item.citation_count >= 20
 
 
 def detect_conflicts(items: List[EvidenceItem]) -> List[Dict]:
@@ -76,7 +94,7 @@ def detect_conflicts(items: List[EvidenceItem]) -> List[Dict]:
                 continue
 
             # enforce minimum credibility
-            if s.citation_count < 20 or c.citation_count < 20:
+            if not (is_credible(s) and is_credible(c)):
                 continue
 
             key = tuple(sorted([s.paper_id, c.paper_id]))
@@ -107,13 +125,13 @@ def compute_confidence(
         return 0.0
 
     agreement = compute_agreement(scores)
-    diversity = compute_diversity(items)
+    breadth = compute_evidence_breadth(items)
 
     avg_conf = sum(i.confidence for i in items) / len(items)
 
     # weighted formula (aligned with system design)
     confidence = (
-        0.4 * agreement + 0.3 * avg_conf + 0.2 * scores["supports"] + 0.1 * diversity
+        0.4 * agreement + 0.3 * avg_conf + 0.2 * scores["supports"] + 0.1 * breadth
     )
 
     # conflict penalty
@@ -134,8 +152,9 @@ def calibrate_confidence(items: List[Dict]) -> Dict:
             "confidence_score": 0.0,
             "confidence_label": "very low",
             "evidence_distribution": {"supports": 0, "contradicts": 0, "neutral": 1},
+            "evidence_counts": {"supports": 0, "contradicts": 0, "neutral": 0},
             "agreement_score": 0.0,
-            "diversity_score": 0.0,
+            "evidence_breadth": 0.0,
             "conflicts": [],
         }
 
@@ -147,13 +166,14 @@ def calibrate_confidence(items: List[Dict]) -> Dict:
             citation_count=i.get("citation_count", 0),
             year=i.get("year"),
             score=i.get("score", 0.0),
+            source=i.get("source", ""),
         )
         for i in items
     ]
 
     scores = compute_directional_scores(evidence)
     agreement = compute_agreement(scores)
-    diversity = compute_diversity(evidence)
+    breadth = compute_evidence_breadth(evidence)
 
     conflicts = detect_conflicts(evidence)
 
@@ -182,7 +202,8 @@ def calibrate_confidence(items: List[Dict]) -> Dict:
         "confidence_score": confidence_score,
         "confidence_label": label,
         "evidence_distribution": scores,
+        "evidence_counts": compute_evidence_counts(evidence),
         "agreement_score": round(agreement, 4),
-        "diversity_score": round(diversity, 4),
+        "evidence_breadth": round(breadth, 4),
         "conflicts": conflicts,
     }

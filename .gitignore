@@ -13,3 +13,7 @@ __pycache__/
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Local handoff notes (not committed)
+CHANGES.md
+INTERVIEW_UPDATE.md

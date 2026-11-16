@@ -14,3 +14,4 @@ class EvidenceItem:
     citation_count: int
     year: Optional[int]
     score: float
+    source: str = ""
